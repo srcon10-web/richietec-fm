@@ -30,6 +30,9 @@ body{background:#0A0A0A;color:#fff;min-height:100vh;overflow-x:hidden}
   .syne{word-break:break-word}
   #topStatus{display:none}
 }
+
+@keyframes barPulse{0%{height:15%}100%{height:35%}}
+#vuBars div{animation: barPulse 0.8s ease-in-out infinite alternate; animation-delay: calc(var(--i)*0.1s)}
 </style>
 </head>
 <body>
@@ -59,7 +62,7 @@ body{background:#0A0A0A;color:#fff;min-height:100vh;overflow-x:hidden}
 </div>
 
 <div style="flex:1;min-width:0">
-<h6 class="syne" id="title">RICHIE TEC<br><span style="color:#FF2D55">FM 101.5</span><br>FREETOWN</h6>
+<h1 class="syne" id="title">RICHIE TEC<br><span style="color:#FF2D55">FM 101.5</span><br>FREETOWN</h1>
 <p class="mono" style="font-size:12px;opacity:.5;margin-top:12px;line-height:1.5">Premium live culture, afrobeats, news & street energy. Direct from Freetown.</p>
 
 <div style="margin-top:20px;display:flex;align-items:center;gap:12px">
@@ -160,14 +163,57 @@ async function ensureAudio(){if(audioCtx)return;audioCtx=new(window.AudioContext
           src.connect(musicGain);
           window._musicSrc=src;
         }
-      }catch(e){console.log('music src',e);}}setInterval(()=>{if(micAnalyser){const d=new Uint8Array(micAnalyser.frequencyBinCount);micAnalyser.getByteFrequencyData(d);const v=d.reduce((a,b)=>a+b,0)/d.length;document.getElementById('micVu').style.height=Math.min(100,v*1.5)+'%';}if(masterAnalyser){const d=new Uint8Array(masterAnalyser.frequencyBinCount);masterAnalyser.getByteFrequencyData(d);const v=d.reduce((a,b)=>a+b,0)/d.length;document.getElementById('masterVu').style.height=Math.min(100,v*1.2)+'%';}},80);}
+      }catch(e){console.log('music src',e);}}setInterval(()=>{
+  if(micAnalyser){
+    const d=new Uint8Array(micAnalyser.frequencyBinCount);
+    micAnalyser.getByteFrequencyData(d);
+    const v=d.reduce((a,b)=>a+b,0)/d.length;
+    const el=document.getElementById('micVu');
+    if(el) el.style.height=Math.min(100,v*1.5)+'%';
+  }
+  if(masterAnalyser){
+    const d=new Uint8Array(masterAnalyser.frequencyBinCount);
+    masterAnalyser.getByteFrequencyData(d);
+    const v=d.reduce((a,b)=>a+b,0)/d.length;
+    const el2=document.getElementById('masterVu');
+    if(el2) el2.style.height=Math.min(100,v*1.2)+'%';
+    // FIX VISUALIZER BARS FOR LISTENER
+    const bars=document.querySelectorAll('#vuBars div');
+    if(bars && (isLive || isBroadcaster || audioEl.srcObject || !musicEl.paused)){
+      bars.forEach((b,i)=>{
+        const h=15 + Math.random()*v*1.2 + Math.sin(Date.now()/200 + i)*10;
+        b.style.height=Math.max(12, Math.min(95, h))+'%';
+        b.style.opacity='1';
+        b.style.transition='height 0.08s';
+      });
+    }
+  }
+  // Listener visualizer when audio playing (no analyser)
+  if(!isBroadcaster && audioEl.srcObject){
+    const bars=document.querySelectorAll('#vuBars div');
+    bars.forEach(b=>{
+      b.style.height=(20 + Math.random()*70)+'%';
+      b.style.transition='height 0.12s';
+    });
+  }
+},80);}
 function loginDJ(){const p=document.getElementById('pwd').value;if(p==="Richietec2026!"){socket.emit('dj-auth',p,ok=>{document.getElementById('loginBox').style.display='none';document.getElementById('mixerBox').style.display='block';});}else{document.getElementById('loginErr').style.display='block';}}
 async function toggleLive(){await ensureAudio();if(!isBroadcaster){try{micStream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}});const micSrc=audioCtx.createMediaStreamSource(micStream);micSrc.connect(micGain);isBroadcaster=true;isLive=true;socket.emit('broadcaster');document.getElementById('goLiveBtn').textContent='■ STOP';document.getElementById('goLiveBtn').style.background='#222';onAirInterval=setInterval(()=>{onAirSec++;document.getElementById('onAirTimer').textContent=String(Math.floor(onAirSec/60)).padStart(2,'0')+':'+String(onAirSec%60).padStart(2,'0');document.getElementById('timer').textContent=String(Math.floor(onAirSec/60)).padStart(2,'0')+':'+String(onAirSec%60).padStart(2,'0')+' ON AIR';},1000);}catch(e){alert('Mic needed');}}else{isBroadcaster=false;isLive=false;if(micStream)micStream.getTracks().forEach(t=>t.stop());socket.emit('broadcaster-stop');document.getElementById('goLiveBtn').textContent='● GO LIVE';document.getElementById('goLiveBtn').style.background='#FF2D55';clearInterval(onAirInterval);onAirSec=0;Object.values(pcs).forEach(pc=>pc.close());pcs={};if(!autoPilot)socket.emit('live-status',false);}}
 function startListening(){if(!isLive&&!autoPilot){alert('Station offline — DJ must GO LIVE or enable AUTOPILOT');return;}socket.emit('watcher');document.getElementById('playLiveBtn').textContent='❚❚';document.getElementById('nowPlaying').textContent='Connecting...';}
 document.getElementById('vol').oninput=e=>{audioEl.volume=e.target.value;document.getElementById('volPct').textContent=Math.round(e.target.value*100)+'%';};
 document.getElementById('micGain').oninput=e=>{if(micGain)micGain.gain.value=e.target.value;};
 document.getElementById('masterGain').oninput=e=>{if(masterGain)masterGain.gain.value=e.target.value;};
-function toggleMute(){if(!micGain)return;micGain.gain.value=micGain.gain.value>0?0:0.8;}
+function toggleMute(){
+  if(!micGain) return;
+  const btn=document.getElementById('muteBtn');
+  if(micGain.gain.value>0){
+    micGain.gain.value=0;
+    if(btn){ btn.textContent='UNMUTED'; btn.style.background='#ef4444'; btn.style.color='#fff'; btn.style.borderColor='#ef4444'; }
+  } else {
+    micGain.gain.value=0.8;
+    if(btn){ btn.textContent='MUTE'; btn.style.background='rgba(255,255,255,.05)'; btn.style.color='#fff'; btn.style.borderColor='rgba(255,255,255,.1)'; }
+  }
+}
 let talkPrev=0.85;function talkDown(){if(!musicGain)return;talkPrev=musicGain.gain.value;musicGain.gain.value=0.15;}function talkUp(){if(!musicGain)return;musicGain.gain.value=talkPrev;}
 document.getElementById('fileInput').onchange=e=>{handleFiles(e.target.files);};
 document.getElementById('dropZone').ondragover=e=>{e.preventDefault();e.currentTarget.style.borderColor='#FF2D55';};
