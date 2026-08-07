@@ -13,22 +13,36 @@ app.get('/', (req, res) => {
 });
 
 let broadcasterId = null;
+// CHANGE YOUR SECRET PASSWORD HERE - only you see this
+const DJ_PASSWORD = process.env.DJ_PASSWORD || "RichieTec2024!Secure";
 
 io.on('connection', socket => {
+  socket.on('dj-auth', (password, callback) => {
+    if(password === DJ_PASSWORD){
+      callback(true);
+    } else {
+      callback(false);
+    }
+  });
+  
   socket.on('broadcaster', () => {
     broadcasterId = socket.id;
     io.emit('live-status', true);
   });
+  
   socket.on('broadcaster-stop', () => {
     broadcasterId = null;
     io.emit('live-status', false);
   });
+  
   socket.on('listener-join', () => {
     if(broadcasterId) io.to(broadcasterId).emit('new-listener', socket.id);
   });
+  
   socket.on('offer', (id, offer) => io.to(id).emit('offer', socket.id, offer));
   socket.on('answer', (id, ans) => io.to(id).emit('answer', socket.id, ans));
   socket.on('ice', (id, cand) => io.to(id).emit('ice', socket.id, cand));
+  
   socket.on('disconnect', () => {
     if(socket.id === broadcasterId){
       broadcasterId = null;
@@ -38,4 +52,4 @@ io.on('connection', socket => {
 });
 
 const PORT = process.env.PORT || 10000;
-server.listen(PORT, () => console.log('RICHIE TEC FM LIVE'));
+server.listen(PORT, () => console.log('RICHIE TEC FM SECURE LIVE'));
