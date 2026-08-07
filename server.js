@@ -2,54 +2,47 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
-
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server, { cors: { origin: "*" } });
+const io = new Server(server, { cors: { origin: "*", methods: ["GET","POST"] } });
 
 app.use(express.static(path.join(__dirname, 'public')));
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
+app.get('/', (req,res) => res.sendFile(path.join(__dirname,'public','index.html')));
 
-let broadcasterId = null;
-// CHANGE YOUR SECRET PASSWORD HERE - only you see this
-const DJ_PASSWORD = process.env.DJ_PASSWORD || "RichieTec2024!Secure";
+let broadcaster = null;
+const DJ_PASS = process.env.DJ_PASSWORD || "Richie2026!";
 
 io.on('connection', socket => {
-  socket.on('dj-auth', (password, callback) => {
-    if(password === DJ_PASSWORD){
-      callback(true);
-    } else {
-      callback(false);
-    }
-  });
-  
+  socket.emit('live-status', broadcaster!== null);
+
+  socket.on('dj-auth', (pwd, cb) => cb(pwd === DJ_PASS));
+
   socket.on('broadcaster', () => {
-    broadcasterId = socket.id;
+    broadcaster = socket.id;
+    console.log('Broadcaster ON:', broadcaster);
     io.emit('live-status', true);
   });
-  
+
   socket.on('broadcaster-stop', () => {
-    broadcasterId = null;
+    broadcaster = null;
     io.emit('live-status', false);
   });
-  
-  socket.on('listener-join', () => {
-    if(broadcasterId) io.to(broadcasterId).emit('new-listener', socket.id);
+
+  socket.on('watcher', () => {
+    if(broadcaster) io.to(broadcaster).emit('watcher', socket.id);
   });
-  
-  socket.on('offer', (id, offer) => io.to(id).emit('offer', socket.id, offer));
-  socket.on('answer', (id, ans) => io.to(id).emit('answer', socket.id, ans));
-  socket.on('ice', (id, cand) => io.to(id).emit('ice', socket.id, cand));
-  
+
+  socket.on('offer', (id, msg) => io.to(id).emit('offer', socket.id, msg));
+  socket.on('answer', (id, msg) => io.to(id).emit('answer', socket.id, msg));
+  socket.on('candidate', (id, msg) => io.to(id).emit('candidate', socket.id, msg));
+
   socket.on('disconnect', () => {
-    if(socket.id === broadcasterId){
-      broadcasterId = null;
+    if(socket.id === broadcaster){
+      broadcaster = null;
       io.emit('live-status', false);
     }
   });
 });
 
 const PORT = process.env.PORT || 10000;
-server.listen(PORT, () => console.log('RICHIE TEC FM SECURE LIVE'));
+server.listen(PORT, () => console.log('RICHIE TEC FM LIVE'));
