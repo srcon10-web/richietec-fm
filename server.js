@@ -10,7 +10,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.get('/', (req,res) => res.sendFile(path.join(__dirname,'public','index.html')));
 
 let broadcaster = null;
-const DJ_PASS = process.env.DJ_PASSWORD || "Richie2026!";
+const DJ_PASS = process.env.DJ_PASSWORD || "Richietec2026!";
 
 io.on('connection', socket => {
   socket.emit('live-status', broadcaster!== null);
