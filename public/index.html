@@ -120,7 +120,7 @@ body{background:#0A0A0A;color:#fff;min-height:100vh;overflow-x:hidden}
 </div>
 </div>
 
-<audio id="audioEl" autoplay playsinline style="display:none"></audio>
+<audio id="audioEl" autoplay playsinline style="display:none" muted="false"></audio>
 <audio id="musicEl" crossorigin="anonymous" style="display:none"></audio>
 <script src="/socket.io/socket.io.js"></script>
 <script>
@@ -131,8 +131,17 @@ const rtcConfig={iceServers:[{urls:'stun:stun.l.google.com:19302'}]};
 function switchMode(m){mode=m;document.getElementById('listenerView').style.display=m==='listener'?'grid':'none';document.getElementById('studioView').style.display=m==='studio'?'block':'none';document.getElementById('btnListener').style.background=m==='listener'?'#fff':'transparent';document.getElementById('btnListener').style.color=m==='listener'?'#000':'rgba(255,255,255,.6)';document.getElementById('btnStudio').style.background=m==='studio'?'#FF2D55':'transparent';document.getElementById('btnStudio').style.color=m==='studio'?'#fff':'rgba(255,255,255,.6)';}
 switchMode('listener');
 socket.on('live-status',live=>{isLive=live;document.getElementById('statusLabel').textContent=live?'LIVE NOW':'OFFLINE';document.getElementById('topStatus').textContent=live?'● LIVE':'● OFFLINE';document.getElementById('statusBox').textContent=live?'LIVE NOW':'OFFLINE';document.getElementById('liveStatusBadge').textContent=live?'🔴 ON AIR':'OFFLINE';document.getElementById('dot').style.background=live?'#00ff66':'#666';document.getElementById('nowPlaying').textContent=live?'RICHIE TEC FM LIVE':'Waiting for DJ';if(!live&&!autoPilot)audioEl.srcObject=null;});
-socket.on('watcher',async id=>{if(!isBroadcaster||!dest)return;const pc=new RTCPeerConnection(rtcConfig);pcs[id]=pc;dest.stream.getTracks().forEach(t=>pc.addTrack(t,dest.stream));pc.onicecandidate=e=>{if(e.candidate)socket.emit('candidate',id,e.candidate)};const offer=await pc.createOffer();await pc.setLocalDescription(offer);socket.emit('offer',id,offer);});
-socket.on('offer',async(bId,offer)=>{const pc=new RTCPeerConnection(rtcConfig);pcs[bId]=pc;pc.ontrack=e=>{audioEl.srcObject=e.streams[0];audioEl.play().catch(()=>{});};pc.onicecandidate=e=>{if(e.candidate)socket.emit('candidate',bId,e.candidate);};await pc.setRemoteDescription(offer);const ans=await pc.createAnswer();await pc.setLocalDescription(ans);socket.emit('answer',bId,ans);});
+socket.on('watcher',async id=>{if(!isBroadcaster||!dest)return;const pc=new RTCPeerConnection(rtcConfig);pcs[id]=pc;dest.stream.getTracks().forEach(t=>{ t.enabled=true; pc.addTrack(t,dest.stream); console.log('Sending track', t); });pc.onicecandidate=e=>{if(e.candidate)socket.emit('candidate',id,e.candidate)};const offer=await pc.createOffer();await pc.setLocalDescription(offer);socket.emit('offer',id,offer);});
+socket.on('offer',async(bId,offer)=>{
+  const pc=new RTCPeerConnection(rtcConfig);
+  pcs[bId]=pc;
+  pc.ontrack=e=>{
+    console.log('Got remote track', e.streams[0]);
+    audioEl.srcObject=e.streams[0];
+    audioEl.muted=false;
+    audioEl.volume=document.getElementById('vol').value || 0.85;
+    audioEl.play().then(()=>{ console.log('Audio playing'); document.getElementById('nowPlaying').textContent='🔴 LIVE - RICHIE TEC FM'; }).catch(err=>{ console.log('Play failed', err); document.getElementById('nowPlaying').textContent='Tap PLAY again to hear'; });
+  };pc.onicecandidate=e=>{if(e.candidate)socket.emit('candidate',bId,e.candidate);};await pc.setRemoteDescription(offer);const ans=await pc.createAnswer();await pc.setLocalDescription(ans);socket.emit('answer',bId,ans);});
 socket.on('answer',(id,ans)=>{if(pcs[id])pcs[id].setRemoteDescription(ans);});
 socket.on('candidate',(id,c)=>{if(pcs[id])pcs[id].addIceCandidate(new RTCIceCandidate(c));});
 socket.on('chat-message', data=>{
