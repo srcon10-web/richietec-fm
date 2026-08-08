@@ -127,7 +127,39 @@ body{background:#0A0A0A;color:#fff;min-height:100vh;overflow-x:hidden}
 const socket=io({transports:['websocket','polling']});
 let mode='listener',isBroadcaster=false,isLive=false,autoPilot=false,audioCtx,micStream,micGain,musicGain,masterGain,dest,micAnalyser,masterAnalyser,sfxGain,pcs={},onAirSec=0,onAirInterval=null,playlist=[],currentTrack=0,isMusicPlaying=false,mediaRecorder,recChunks=[];
 const audioEl=document.getElementById('audioEl'),musicEl=document.getElementById('musicEl');
-const rtcConfig={iceServers:[{urls:'stun:stun.l.google.com:19302'}]};
+const rtcConfig={
+  iceServers:[
+    {urls:'stun:stun.l.google.com:19302'},
+    {urls:'stun:stun1.l.google.com:19302'},
+    {urls:'stun:stun2.l.google.com:19302'},
+    {urls:'stun:stun3.l.google.com:19302'},
+    {urls:'stun:stun4.l.google.com:19302'},
+    // TURN servers for outside network / NAT traversal - THIS FIXES outside network
+    {
+      urls:'turn:openrelay.metered.ca:80',
+      username:'openrelayproject',
+      credential:'openrelayproject'
+    },
+    {
+      urls:'turn:openrelay.metered.ca:443',
+      username:'openrelayproject',
+      credential:'openrelayproject'
+    },
+    {
+      urls:'turn:openrelay.metered.ca:443?transport=tcp',
+      username:'openrelayproject',
+      credential:'openrelayproject'
+    },
+    {
+      urls:'turn:relay1.expressturn.com:3480',
+      username:'ef3U3R2D8G5WJ6Z7',
+      credential:'dN4k8L2p0Q7r9T1w'
+    }
+  ],
+  iceTransportPolicy:'all',
+  bundlePolicy:'max-bundle',
+  rtcpMuxPolicy:'require'
+};
 function switchMode(m){mode=m;document.getElementById('listenerView').style.display=m==='listener'?'grid':'none';document.getElementById('studioView').style.display=m==='studio'?'block':'none';document.getElementById('btnListener').style.background=m==='listener'?'#fff':'transparent';document.getElementById('btnListener').style.color=m==='listener'?'#000':'rgba(255,255,255,.6)';document.getElementById('btnStudio').style.background=m==='studio'?'#FF2D55':'transparent';document.getElementById('btnStudio').style.color=m==='studio'?'#fff':'rgba(255,255,255,.6)';}
 switchMode('listener');
 socket.on('live-status',live=>{isLive=live;document.getElementById('statusLabel').textContent=live?'LIVE NOW':'OFFLINE';document.getElementById('topStatus').textContent=live?'● LIVE':'● OFFLINE';document.getElementById('statusBox').textContent=live?'LIVE NOW':'OFFLINE';document.getElementById('liveStatusBadge').textContent=live?'🔴 ON AIR':'OFFLINE';document.getElementById('dot').style.background=live?'#00ff66':'#666';document.getElementById('nowPlaying').textContent=live?'RICHIE TEC FM LIVE':'Waiting for DJ';if(!live&&!autoPilot)audioEl.srcObject=null;});
