@@ -3,22 +3,16 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Internet Radio</title>
+  <title>Richietec FM Live</title>
 </head>
 <body>
-  <h2>Live Radio</h2>
+  <h2>Richietec FM - Live</h2>
   <button id="playBtn">▶️ Play Live</button>
   <p id="status">Stopped</p>
 
   <script>
-    // ============================================
-    // CHANGE ONLY THIS LINE TO YOUR RENDER URL
-    // ============================================
-    const RENDER_STREAM_URL = "https://YOUR-APP-NAME.onrender.com/stream";
-    // Example: "https://my-radio-backend.onrender.com/stream"
-    // Example for Icecast: "https://my-radio-backend.onrender.com/radio.mp3"
-    // IMPORTANT: Must start with https:// and have NO port number like :8000
-    // ============================================
+    // Your Render URL from the screenshot - already fixed
+    const RENDER_STREAM_URL = "https://richietec-fm.onrender.com/stream";
 
     const playBtn = document.getElementById('playBtn');
     const statusText = document.getElementById('status');
@@ -33,27 +27,32 @@
         return;
       }
 
-      // Cache-buster to prevent browser from using old dead connection
-      const streamWithBuster = RENDER_STREAM_URL + "?t=" + Date.now();
-
-      audio = new Audio(streamWithBuster);
-      audio.crossOrigin = "anonymous"; // Fixes CORS
+      // Try /stream first, if that fails try common alternatives
+      const url = RENDER_STREAM_URL + "?t=" + Date.now();
+      
+      audio = new Audio(url);
+      audio.crossOrigin = "anonymous";
       audio.preload = "none";
 
-      statusText.textContent = "Connecting to Render... (may take 10s if server was sleeping)";
+      statusText.textContent = "Connecting... your free Render instance may take 50 seconds to wake up (as shown in your screenshot)";
 
       audio.play().then(() => {
-        statusText.textContent = "🔴 LIVE";
+        statusText.textContent = "🔴 LIVE - Richietec FM";
         playBtn.textContent = "⏸️ Stop";
       }).catch(err => {
         console.error(err);
-        statusText.textContent = "Error: " + err.message + ". Check console.";
-        alert("Could not play. Make sure your Render URL is correct and is https://");
+        statusText.textContent = "Could not play /stream. Trying /radio.mp3...";
+        // Auto-fallback to /radio.mp3 which is common for Icecast
+        const fallback = new Audio("https://richietec-fm.onrender.com/radio.mp3?t=" + Date.now());
+        fallback.crossOrigin = "anonymous";
+        fallback.play().then(() => {
+          audio = fallback;
+          statusText.textContent = "🔴 LIVE - Richietec FM";
+          playBtn.textContent = "⏸️ Stop";
+        }).catch(() => {
+          statusText.textContent = "Error. Open https://richietec-fm.onrender.com in a new tab to see if server is running.";
+        });
       });
-
-      audio.onerror = () => {
-        statusText.textContent = "Stream error. Is your Render service running?";
-      };
     });
   </script>
 </body>
