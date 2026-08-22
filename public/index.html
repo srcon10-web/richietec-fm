@@ -1,59 +1,413 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Richietec FM Live</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>RICHIE TEC FM 101.5 - Live</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=JetBrains+Mono:wght@400;600&family=Inter:wght@400;600;800;900&display=swap" rel="stylesheet">
+<style>
+*{font-family:Inter,system-ui;box-sizing:border-box;margin:0;padding:0}
+h1,h2,.syne{font-family:Syne,sans-serif} .mono{font-family:"JetBrains Mono",monospace}
+body{background:#0A0A0A;color:#fff;min-height:100vh;overflow-x:hidden}
+.glass{background:linear-gradient(180deg,rgba(255,255,255,.07),rgba(255,255,255,.03));backdrop-filter:blur(22px);border:1px solid rgba(255,255,255,.08)}
+.range{-webkit-appearance:none;height:4px;background:#222;border-radius:20px;width:100%}
+.range::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;background:#FF2D55;border-radius:50%}
+#listenerView{max-width:1440px;margin:0 auto;padding:24px;display:grid;grid-template-columns:1.2fr .8fr;gap:24px}
+#playerRow{display:flex;gap:32px;flex-wrap:wrap}
+#artBox{width:320px;aspect-ratio:1;border-radius:22px;background:linear-gradient(135deg,#18181b,#000);border:1px solid rgba(255,255,255,.1);display:grid;place-items:center;position:relative;flex-shrink:0}
+#title{font-size:52px;font-weight:800;line-height:.9;letter-spacing:-.02em;word-break:break-word}
+@media(max-width:900px){
+  header div{flex-wrap:wrap;height:auto!important;padding:12px 16px!important}
+  #listenerView{grid-template-columns:1fr!important;padding:12px!important;gap:16px}
+  #playerRow{flex-direction:column!important;gap:16px}
+  #artBox{width:100%!important;aspect-ratio:16/10!important}
+  #title{font-size:32px!important;line-height:1!important}
+  #studioGrid{grid-template-columns:1fr!important}
+  #sfxGrid{grid-template-columns:1fr!important}
+  .syne{word-break:break-word}
+  #topStatus{display:none}
+}
+@keyframes barPulse{0%{height:15%}100%{height:35%}}
+#vuBars div{animation: barPulse 0.8s ease-in-out infinite alternate; animation-delay: calc(var(--i)*0.1s)}
+</style>
 </head>
 <body>
-  <h2>Richietec FM - Live</h2>
-  <button id="playBtn">▶️ Play Live</button>
-  <p id="status">Stopped</p>
+<header style="border-bottom:1px solid rgba(255,255,255,.08);background:rgba(10,10,10,.9);backdrop-filter:blur(24px);position:sticky;top:0;z-index:50">
+<div style="max-width:1440px;margin:0 auto;padding:0 16px;height:64px;display:flex;align-items:center;justify-content:space-between;gap:8px">
+<div style="display:flex;align-items:center;gap:10px"><div style="width:36px;height:36px;border-radius:10px;background:#FF2D55;display:grid;place-items:center;font-weight:900;flex-shrink:0">R</div><div style="min-width:0"><div class="syne" style="font-weight:800;font-size:16px;line-height:1;white-space:nowrap">RICHIE TEC FM <span style="color:#FF2D55">101.5</span></div><div class="mono" style="font-size:8px;letter-spacing:.15em;opacity:.5;margin-top:2px">FREETOWN • V3 PRO • LIVE</div></div></div>
+<div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+<div id="topStatus" class="mono" style="padding:6px 10px;border-radius:999px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.05);font-size:10px">● OFFLINE</div>
+<div style="display:flex;padding:3px;border-radius:999px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1)">
+<button id="btnListener" onclick="switchMode('listener')" style="padding:6px 12px;border-radius:999px;border:none;font-size:10px;font-weight:700;background:#fff;color:#000" class="mono">LISTENER</button>
+<button id="btnStudio" onclick="switchMode('studio')" style="padding:6px 12px;border-radius:999px;border:none;font-size:10px;font-weight:700;background:transparent;color:rgba(255,255,255,.6)" class="mono">DJ STUDIO</button>
+</div>
+</div>
+</div>
+</header>
 
-  <script>
-    // Your Render URL from the screenshot - already fixed
-    const RENDER_STREAM_URL = "https://richietec-fm.onrender.com/stream";
+<div id="listenerView">
+<div class="glass" style="border-radius:20px;padding:16px;position:relative;overflow:hidden">
+<div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;flex-wrap:wrap"><span style="width:8px;height:8px;border-radius:50%;background:#666;display:inline-block" id="dot"></span><span class="mono" style="font-size:11px;letter-spacing:.15em;font-weight:700" id="statusLabel">OFFLINE</span><span class="mono" style="font-size:9px;padding:4px 8px;border-radius:999px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1)" id="timer">00:00 ON AIR</span><span class="mono" style="font-size:9px;opacity:.5;margin-left:auto" id="liveCount">0 LISTENERS</span></div>
 
-    const playBtn = document.getElementById('playBtn');
-    const statusText = document.getElementById('status');
-    let audio = null;
+<div id="playerRow">
+<div id="artBox">
+<div id="vuBars" style="display:flex;align-items:end;gap:5px;height:80px">
+<div style="width:8px;height:20%;background:#FF2D55;border-radius:10px"></div><div style="width:8px;height:20%;background:#FF2D55;border-radius:10px"></div><div style="width:8px;height:20%;background:#FF2D55;border-radius:10px"></div><div style="width:8px;height:20%;background:#FF2D55;border-radius:10px"></div><div style="width:8px;height:20%;background:#FF2D55;border-radius:10px"></div><div style="width:8px;height:20%;background:#FF2D55;border-radius:10px"></div>
+</div>
+<div class="glass" style="position:absolute;bottom:12px;left:12px;right:12px;border-radius:999px;padding:8px 10px;display:flex;align-items:center;gap:8px"><div style="width:28px;height:28px;border-radius:50%;background:#fff;color:#000;display:grid;place-items:center;font-weight:900;font-size:12px">♪</div><div style="overflow:hidden;flex:1"><div class="mono" style="font-size:8px;opacity:.5">NOW PLAYING</div><div class="mono" style="font-size:11px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" id="nowPlaying">Waiting for DJ</div></div></div>
+</div>
 
-    playBtn.addEventListener('click', () => {
-      if (audio && !audio.paused) {
-        audio.pause();
-        audio = null;
-        playBtn.textContent = "▶️ Play Live";
-        statusText.textContent = "Stopped";
-        return;
-      }
+<div style="flex:1;min-width:0">
+<h1 class="syne" id="title">RICHIE TEC<br><span style="color:#FF2D55">FM 101.5</span><br><span style="font-size:0.21em;letter-spacing:0.05em;display:block;white-space:nowrap;line-height:1;margin-top:6px;transform:scaleX(0.95);transform-origin:left">FREETOWN</span></h1>
+<p class="mono" style="font-size:12px;opacity:.5;margin-top:12px;line-height:1.5">Premium live culture, afrobeats, news & street energy. Direct from Freetown.</p>
 
-      // Try /stream first, if that fails try common alternatives
-      const url = RENDER_STREAM_URL + "?t=" + Date.now();
-      
-      audio = new Audio(url);
-      audio.crossOrigin = "anonymous";
-      audio.preload = "none";
+<div style="margin-top:20px;display:flex;align-items:center;gap:12px">
+<button id="playLiveBtn" onclick="startListening()" style="width:56px;height:56px;border-radius:50%;background:#FF2D55;border:none;display:grid;place-items:center;color:#fff;font-size:20px;flex-shrink:0">▶</button>
+<div style="flex:1;min-width:0"><div class="mono" style="font-size:9px;opacity:.4;display:flex;justify-content:space-between"><span>VOLUME</span><span id="volPct">85%</span></div><input id="vol" type="range" min="0" max="1" step="0.01" value="0.85" class="range" style="margin-top:6px"></div>
+</div>
 
-      statusText.textContent = "Connecting... your free Render instance may take 50 seconds to wake up (as shown in your screenshot)";
+<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:20px">
+<div class="glass" style="border-radius:12px;padding:10px"><div class="mono" style="font-size:8px;opacity:.4">STATUS</div><div class="mono" id="statusBox" style="font-size:11px;font-weight:700;margin-top:2px">OFFLINE</div></div>
+<div class="glass" style="border-radius:12px;padding:10px"><div class="mono" style="font-size:8px;opacity:.4">QUALITY</div><div class="mono" style="font-size:11px;font-weight:700;margin-top:2px">HD AUDIO</div></div>
+<div class="glass" style="border-radius:12px;padding:10px"><div class="mono" style="font-size:8px;opacity:.4">CITY</div><div class="mono" style="font-size:11px;font-weight:700;margin-top:2px">Freetown</div></div>
+</div>
+</div>
+</div>
+</div>
 
-      audio.play().then(() => {
-        statusText.textContent = "🔴 LIVE - Richietec FM";
-        playBtn.textContent = "⏸️ Stop";
-      }).catch(err => {
-        console.error(err);
-        statusText.textContent = "Could not play /stream. Trying /radio.mp3...";
-        // Auto-fallback to /radio.mp3 which is common for Icecast
-        const fallback = new Audio("https://richietec-fm.onrender.com/radio.mp3?t=" + Date.now());
-        fallback.crossOrigin = "anonymous";
-        fallback.play().then(() => {
-          audio = fallback;
-          statusText.textContent = "🔴 LIVE - Richietec FM";
-          playBtn.textContent = "⏸️ Stop";
-        }).catch(() => {
-          statusText.textContent = "Error. Open https://richietec-fm.onrender.com in a new tab to see if server is running.";
-        });
-      });
+<div style="display:flex;flex-direction:column;gap:16px;min-width:0">
+<div class="glass" style="border-radius:20px;padding:16px"><h3 class="syne" style="font-weight:700;font-size:14px">LIVE CHAT <span style="float:right;font-size:9px;padding:3px 6px;border-radius:999px;background:rgba(16,185,129,.15);color:#6ee7b3" class="mono">LIVE</span></h3><div id="chat" style="height:160px;overflow:auto;margin:12px 0;display:flex;flex-direction:column;gap:8px;font-size:12px"><div><b>DJ_Kadi:</b> Freetown you locked in? 🔥</div><div><b>SaloneBoy:</b> Play that new Drizilik!</div></div><div style="display:flex;gap:6px"><input id="chatIn" placeholder="Shoutout..." style="flex:1;height:38px;border-radius:999px;background:rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.1);padding:0 12px;color:#fff;font-size:12px"><button onclick="sendChat()" style="height:38px;padding:0 14px;border-radius:999px;background:#fff;color:#000;font-weight:700;border:none;font-size:11px">SEND</button></div></div>
+<div class="glass" style="border-radius:20px;padding:16px"><h3 class="syne" style="font-size:14px">REQUEST LINE</h3><input id="reqName" placeholder="Your name" style="width:100%;height:38px;border-radius:10px;background:rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.1);padding:0 12px;margin:10px 0 0;color:#fff;font-size:12px"><input id="reqSong" placeholder="Song / Artist" style="width:100%;height:38px;border-radius:10px;background:rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.1);padding:0 12px;margin:8px 0;color:#fff;font-size:12px"><button onclick="sendReq()" style="width:100%;height:40px;border-radius:10px;background:#FF2D55;color:#fff;font-weight:700;border:none;margin-top:8px;font-size:12px">SUBMIT REQUEST</button></div>
+</div>
+</div>
+
+<div id="studioView" style="display:none;max-width:1440px;margin:0 auto;padding:16px">
+<div id="loginBox" class="glass" style="max-width:420px;margin:40px auto;border-radius:20px;padding:24px;text-align:center">
+<div style="width:44px;height:44px;border-radius:12px;background:#FF2D55;display:grid;place-items:center;font-weight:900;margin:0 auto 12px">DJ</div>
+<h2 class="syne" style="font-size:22px;font-weight:800">DJ Studio Access</h2>
+<p class="mono" style="font-size:11px;opacity:.5;margin-top:6px">Secure access • Richie Tec FM</p>
+<input id="pwd" type="password" placeholder="Enter DJ password" style="width:100%;height:44px;border-radius:10px;background:rgba(0,0,0,.6);border:1px solid rgba(255,255,255,.1);padding:0 12px;margin:20px 0;color:#fff">
+<button onclick="loginDJ()" style="width:100%;height:44px;border-radius:10px;background:#fff;color:#000;font-weight:800;border:none">UNLOCK STUDIO</button>
+<p id="loginErr" style="color:#f87171;font-size:11px;margin-top:10px;display:none" class="mono">Wrong password</p>
+</div>
+
+<div id="mixerBox" style="display:none">
+<div class="glass" style="border-radius:16px;padding:12px;display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between">
+<div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+<button id="goLiveBtn" onclick="toggleLive()" style="height:48px;padding:0 20px;border-radius:999px;background:#FF2D55;color:#fff;font-weight:900;border:none;font-size:12px" class="mono">● GO LIVE</button>
+<div class="mono"><div style="font-size:8px;opacity:.4">ON AIR</div><div id="onAirTimer" style="font-size:18px;font-weight:700">00:00</div></div>
+<div id="liveStatusBadge" style="padding:5px 10px;border-radius:999px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);font-size:10px" class="mono">OFFLINE</div>
+</div>
+<button onclick="switchMode('listener')" style="height:32px;padding:0 12px;border-radius:999px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);color:#fff;font-size:10px" class="mono">LOCK</button>
+</div>
+
+<div id="studioGrid" style="display:grid;grid-template-columns:280px 1fr 220px;gap:16px;margin-top:16px">
+<div class="glass" style="border-radius:16px;padding:16px"><h4 class="syne" style="font-size:14px">MIC</h4><div style="display:flex;gap:12px;margin-top:12px"><div style="width:32px;height:180px;border-radius:999px;background:rgba(0,0,0,.6);border:1px solid rgba(255,255,255,.1);position:relative;overflow:hidden"><div id="micVu" style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(#FF2D55,#FF8A00);height:10%"></div></div><div style="flex:1"><input id="micGain" type="range" min="0" max="1" step="0.01" value="0.8" class="range"><button id="muteBtn" onclick="toggleMute()" style="width:100%;height:32px;border-radius:8px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);color:#fff;margin-top:10px;font-size:11px" class="mono">MUTE</button><button id="talkBtn" onmousedown="talkDown()" onmouseup="talkUp()" ontouchstart="talkDown()" ontouchend="talkUp()" style="width:100%;height:48px;border-radius:10px;background:#fff;color:#000;font-weight:900;margin-top:10px;font-size:11px" class="mono">TALKOVER</button><label class="mono" style="font-size:10px;display:flex;gap:4px;margin-top:10px"><input type="checkbox" id="autoDuck" checked> AUTO-DUCK</label></div></div></div>
+
+<div class="glass" style="border-radius:16px;padding:16px"><h4 class="syne" style="font-size:14px">MUSIC DECK</h4><div id="dropZone" style="border:2px dashed rgba(255,255,255,.15);border-radius:10px;padding:12px;text-align:center;margin:12px 0;background:rgba(0,0,0,.2);font-size:11px" class="mono">Drag & Drop MP3s or <label style="background:#fff;color:#000;padding:4px 10px;border-radius:999px;font-weight:700;cursor:pointer;margin-left:6px">BROWSE<input type="file" multiple accept="audio/*" style="display:none" id="fileInput"></label></div><div style="display:flex;gap:8px;align-items:center"><button onclick="playPauseMusic()" style="width:36px;height:36px;border-radius:50%;background:#fff;color:#000;display:grid;place-items:center;border:none" id="musicPlayBtn">▶</button><button onclick="nextTrack()" style="width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.1);color:#fff;font-size:10px">NEXT</button><div style="flex:1"><div style="height:4px;border-radius:999px;background:rgba(255,255,255,.1);overflow:hidden"><div id="musicProgress" style="height:100%;background:#FF2D55;width:0%"></div></div><div class="mono" style="font-size:9px;opacity:.4;display:flex;justify-content:space-between;margin-top:4px"><span id="trackName" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px">No track</span><span id="trackPct">0%</span></div></div></div><div id="playlist" style="max-height:120px;overflow:auto;margin-top:10px;display:flex;flex-direction:column;gap:4px"></div></div>
+
+<div style="display:flex;flex-direction:column;gap:16px"><div class="glass" style="border-radius:16px;padding:16px"><h4 class="syne" style="font-size:14px">MASTER</h4><div style="display:flex;gap:12px;margin-top:10px"><div style="width:24px;height:140px;border-radius:999px;background:rgba(0,0,0,.6);border:1px solid rgba(255,255,255,.1);position:relative"><div id="masterVu" style="position:absolute;bottom:0;left:0;right:0;background:#FF2D55;height:20%;border-radius:999px"></div></div><div style="flex:1"><input id="masterGain" type="range" min="0" max="1" step="0.01" value="0.9" class="range"><div class="mono" style="font-size:9px;opacity:.3;margin-top:8px">Mixed → listeners</div></div></div></div><div class="glass" style="border-radius:16px;padding:16px"><div style="display:flex;justify-content:space-between;align-items:center"><h4 class="syne" style="font-size:13px">AUTOPILOT</h4><button id="autoBtn" onclick="toggleAuto()" style="height:28px;padding:0 12px;border-radius:999px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);font-weight:700;font-size:10px" class="mono">OFF</button></div><div id="autoNow" class="mono" style="margin-top:10px;padding:8px;border-radius:8px;background:rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.1);font-size:9px">Idle</div></div></div>
+</div>
+
+<div id="sfxGrid" style="display:grid;grid-template-columns:1fr 320px;gap:16px;margin-top:16px">
+<div class="glass" style="border-radius:16px;padding:16px"><h4 class="syne" style="font-size:13px">SFX PAD</h4><div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:12px"><button onclick="playSfx('airhorn')" style="height:64px;border-radius:12px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.03);color:#fff;font-size:10px">📯<br>AIRHORN</button><button onclick="playSfx('applause')" style="height:64px;border-radius:12px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.03);color:#fff;font-size:10px">👏<br>APPLAUSE</button><button onclick="playSfx('laugh')" style="height:64px;border-radius:12px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.03);color:#fff;font-size:10px">😂<br>LAUGH</button><button onclick="playSfx('siren')" style="height:64px;border-radius:12px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.03);color:#fff;font-size:10px">🚨<br>SIREN</button></div></div>
+<div class="glass" style="border-radius:16px;padding:16px"><div style="display:flex;justify-content:space-between"><h4 class="syne" style="font-size:13px">REC</h4><button id="recBtn" onclick="toggleRec()" style="height:28px;padding:0 12px;border-radius:999px;background:#fff;color:#000;font-weight:700;border:none;font-size:10px" class="mono">● REC</button></div><div id="recList" style="margin-top:10px;max-height:120px;overflow:auto"></div></div>
+</div>
+</div>
+</div>
+
+<audio id="audioEl" autoplay playsinline style="display:none"></audio>
+<audio id="musicEl" crossorigin="anonymous" style="display:none"></audio>
+<script src="/socket.io/socket.io.js"></script>
+<script>
+const socket=io({transports:['websocket','polling']});
+let mode='listener',isBroadcaster=false,isLive=false,autoPilot=false,audioCtx,micStream,micGain,musicGain,masterGain,dest,micAnalyser,masterAnalyser,sfxGain,pcs={},onAirSec=0,onAirInterval=null,playlist=[],currentTrack=0,isMusicPlaying=false,mediaRecorder,recChunks=[],isRecording=false;
+// WORLDWIDE TURN FIX - DO NOT REMOVE - Allows outside network playback
+
+// FIXED: Enhanced TURN/STUN configuration for better outside-network connectivity
+const rtcConfig={
+  iceServers:[
+    {urls:['stun:stun.l.google.com:19302','stun:stun1.l.google.com:19302','stun:stun2.l.google.com:19302','stun:stun3.l.google.com:19302','stun:stun4.l.google.com:19302']},
+    {urls:'stun:stun.anyfirewall.com:3478'},
+    {urls:'stun:stun.voipstunt.com:3478'},
+    {
+      urls:'turn:openrelay.metered.ca:80',
+      username:'openrelayproject',
+      credential:'openrelayproject'
+    },
+    {
+      urls:'turn:openrelay.metered.ca:443',
+      username:'openrelayproject',
+      credential:'openrelayproject'
+    },
+    {
+      urls:'turn:openrelay.metered.ca:443?transport=tcp',
+      username:'openrelayproject',
+      credential:'openrelayproject'
+    },
+    {
+      urls:'turn:standard.relay.metered.ca:80',
+      username:'e8dd2cc06d2a5e3a3dd4c4a72',
+      credential:'Xa1dD4vJ8Wq2zP7f'
+    },
+    {
+      urls:'turn:standard.relay.metered.ca:443',
+      username:'e8dd2cc06d2a5e3a3dd4c4a72',
+      credential:'Xa1dD4vJ8Wq2zP7f'
+    }
+  ],
+  iceCandidatePoolSize:10,
+  bundlePolicy:'max-bundle',
+  rtcpMuxPolicy:'require'
+};
+
+function switchMode(m){mode=m;document.getElementById('listenerView').style.display=m==='listener'?'grid':'none';document.getElementById('studioView').style.display=m==='studio'?'block':'none';document.getElementById('btnListener').style.background=m==='listener'?'#fff':'transparent';document.getElementById('btnListener').style.color=m==='listener'?'#000':'rgba(255,255,255,.6)';document.getElementById('btnStudio').style.background=m==='studio'?'#FF2D55':'transparent';document.getElementById('btnStudio').style.color=m==='studio'?'#fff':'rgba(255,255,255,.6)';}
+switchMode('listener');
+
+socket.on('live-status',live=>{isLive=live;document.getElementById('statusLabel').textContent=live?'LIVE NOW':'OFFLINE';document.getElementById('topStatus').textContent=live?'● LIVE':'● OFFLINE';document.getElementById('statusBox').textContent=live?'LIVE NOW':'OFFLINE';document.getElementById('liveStatusBadge').textContent=live?'🔴 ON AIR':'OFFLINE';document.getElementById('dot').style.background=live?'#00ff66':'#666';document.getElementById('nowPlaying').textContent=live?'RICHIE TEC FM LIVE':'Waiting for DJ';if(!live&&!autoPilot){audioEl.srcObject=null;}});
+socket.on('watcher',async id=>{if(!isBroadcaster||!dest)return;try{const pc=new RTCPeerConnection(rtcConfig);pcs[id]=pc;dest.stream.getTracks().forEach(t=>{t.enabled=true;pc.addTrack(t,dest.stream);});pc.onicecandidate=e=>{if(e.candidate)socket.emit('candidate',id,e.candidate)};const offer=await pc.createOffer({offerToReceiveAudio:false,offerToReceiveVideo:false});await pc.setLocalDescription(offer);socket.emit('offer',id,offer);}catch(e){console.error('watcher error',e);}});
+socket.on('offer',async(bId,offer)=>{try{const pc=new RTCPeerConnection(rtcConfig);pcs[bId]=pc;pc.ontrack=e=>{audioEl.srcObject=e.streams[0];audioEl.muted=false;audioEl.volume=parseFloat(document.getElementById('vol').value)||0.85;audioEl.play().then(()=>{document.getElementById('nowPlaying').textContent='🔴 LIVE - RICHIE TEC FM 101.5 WORLDWIDE';}).catch(()=>{document.getElementById('nowPlaying').textContent='Tap PLAY again - outside network';});};pc.onicecandidate=e=>{if(e.candidate)socket.emit('candidate',bId,e.candidate);};await pc.setRemoteDescription(offer);const ans=await pc.createAnswer();await pc.setLocalDescription(ans);socket.emit('answer',bId,ans);}catch(e){console.error('offer error',e);}});
+socket.on('answer',(id,ans)=>{if(pcs[id])pcs[id].setRemoteDescription(ans).catch(e=>console.log(e));});
+socket.on('candidate',(id,c)=>{if(pcs[id])pcs[id].addIceCandidate(new RTCIceCandidate(c)).catch(e=>console.log(e));});
+
+// FIXED: Better WebRTC connection handling for outside networks
+socket.on('watcher',async id=>{
+  if(!isBroadcaster||!dest)return;
+  try{
+    const pc=new RTCPeerConnection(rtcConfig);
+    pcs[id]=pc;
+    
+    // Add all audio tracks from the destination stream
+    dest.stream.getAudioTracks().forEach(t=>{
+      pc.addTrack(t, dest.stream);
     });
-  </script>
+    
+    // Handle ICE candidates with better logging
+    pc.onicecandidate=e=>{
+      if(e.candidate){
+        socket.emit('candidate', id, e.candidate);
+      }
+    };
+    
+    // Handle connection state changes
+    pc.onconnectionstatechange=()=>{
+      console.log('Connection state:', pc.connectionState);
+      if(pc.connectionState === 'connected' || pc.connectionState === 'completed'){
+        console.log('Peer connected successfully!');
+      }
+    };
+    
+    const offer=await pc.createOffer({
+      offerToReceiveAudio:false,
+      offerToReceiveVideo:false
+    });
+    await pc.setLocalDescription(offer);
+    socket.emit('offer', id, offer);
+  }catch(e){
+    console.error('watcher error',e);
+  }
+});
+
+// FIXED: Better handling for incoming offers
+socket.on('offer', async (bId, offer) => {
+  try{
+    const pc = new RTCPeerConnection(rtcConfig);
+    pcs[bId] = pc;
+    
+    pc.ontrack = e => {
+      if(e.streams && e.streams[0]){
+        audioEl.srcObject = e.streams[0];
+        audioEl.muted = false;
+        audioEl.volume = parseFloat(document.getElementById('vol').value) || 0.85;
+        audioEl.play().then(() => {
+          document.getElementById('nowPlaying').textContent = '🔴 LIVE - RICHIE TEC FM 101.5 WORLDWIDE';
+        }).catch(err => {
+          console.log('Auto-play failed, waiting for user interaction');
+          document.getElementById('nowPlaying').textContent = 'Tap PLAY to connect';
+        });
+      }
+    };
+    
+    pc.onicecandidate = e => {
+      if(e.candidate) {
+        socket.emit('candidate', bId, e.candidate);
+      }
+    };
+    
+    pc.onconnectionstatechange = () => {
+      console.log('Connection state:', pc.connectionState);
+      if(pc.connectionState === 'connected' || pc.connectionState === 'completed'){
+        console.log('Connected to broadcaster!');
+        document.getElementById('nowPlaying').textContent = '🔴 LIVE - RICHIE TEC FM 101.5 WORLDWIDE';
+      }
+    };
+    
+    await pc.setRemoteDescription(offer);
+    const ans = await pc.createAnswer();
+    await pc.setLocalDescription(ans);
+    socket.emit('answer', bId, ans);
+  }catch(e){
+    console.error('offer error',e);
+  }
+});
+
+socket.on('answer',(id,ans)=>{
+  if(pcs[id]){
+    pcs[id].setRemoteDescription(ans).catch(e=>console.log(e));
+  }
+});
+
+socket.on('candidate',(id,c)=>{
+  if(pcs[id]){
+    pcs[id].addIceCandidate(new RTCIceCandidate(c)).catch(e=>console.log(e));
+  }
+});
+
+socket.on('chat-message', data=>{const chat=document.getElementById('chat');if(chat){const div=document.createElement('div');div.innerHTML=`<b>${data.user}:</b> ${data.text}`;chat.appendChild(div);chat.scrollTop=chat.scrollHeight;}});
+socket.on('new-request', data=>{const chat=document.getElementById('chat');if(chat){const div=document.createElement('div');div.style.cssText='padding:6px;border-radius:8px;background:rgba(255,45,85,.15);border:1px solid rgba(255,45,85,.3);margin-top:4px';div.innerHTML=`<b>🎵 REQUEST:</b> ${data.name} - ${data.song} <span style="opacity:.5;font-size:9px">${data.time}</span>`;chat.appendChild(div);chat.scrollTop=chat.scrollHeight;}if(isBroadcaster){try{alert('🎵 NEW REQUEST from '+data.name+': '+data.song);}catch(e){}}});
+async function ensureAudio(){if(audioCtx)return;audioCtx=new(window.AudioContext||window.webkitAudioContext)();await audioCtx.resume();micGain=audioCtx.createGain();micGain.gain.value=0.8;musicGain=audioCtx.createGain();musicGain.gain.value=0.85;masterGain=audioCtx.createGain();masterGain.gain.value=0.9;sfxGain=audioCtx.createGain();sfxGain.gain.value=0.9;dest=audioCtx.createMediaStreamDestination();micAnalyser=audioCtx.createAnalyser();micAnalyser.fftSize=256;masterAnalyser=audioCtx.createAnalyser();masterAnalyser.fftSize=256;micGain.connect(micAnalyser);micGain.connect(masterGain);musicGain.connect(masterGain);sfxGain.connect(masterGain);masterGain.connect(masterAnalyser);try{masterGain.connect(audioCtx.destination);}catch(e){}masterAnalyser.connect(dest);if(dest.stream)dest.stream.getAudioTracks().forEach(t=>t.enabled=true);try{if(!window._musicSrc){const src=audioCtx.createMediaElementSource(musicEl);src.connect(musicGain);window._musicSrc=src;}}catch(e){}setInterval(()=>{if(micAnalyser){const d=new Uint8Array(micAnalyser.frequencyBinCount);micAnalyser.getByteFrequencyData(d);const v=d.reduce((a,b)=>a+b,0)/d.length;const el=document.getElementById('micVu');if(el)el.style.height=Math.min(100,v*1.5)+'%';}if(masterAnalyser){const d=new Uint8Array(masterAnalyser.frequencyBinCount);masterAnalyser.getByteFrequencyData(d);const v=d.reduce((a,b)=>a+b,0)/d.length;const el2=document.getElementById('masterVu');if(el2)el2.style.height=Math.min(100,v*1.2)+'%';const bars=document.querySelectorAll('#vuBars div');if(bars&&(isLive||isBroadcaster||audioEl.srcObject||!musicEl.paused)){bars.forEach((b,i)=>{const h=15+Math.random()*v*1.2+Math.sin(Date.now()/200+i)*10;b.style.height=Math.max(12,Math.min(95,h))+'%';b.style.opacity='1';b.style.transition='height 0.08s';});}}if(!isBroadcaster&&audioEl.srcObject){const bars=document.querySelectorAll('#vuBars div');bars.forEach(b=>{b.style.height=(20+Math.random()*70)+'%';b.style.transition='height 0.12s';});}},80);}
+function loginDJ(){const p=document.getElementById('pwd').value;if(p==="Richietec2026!"){socket.emit('dj-auth',p,ok=>{document.getElementById('loginBox').style.display='none';document.getElementById('mixerBox').style.display='block';});}else{document.getElementById('loginErr').style.display='block';}}
+
+async function ensureAudio(){
+  if(audioCtx)return;
+  audioCtx=new(window.AudioContext||window.webkitAudioContext)();
+  await audioCtx.resume();
+  micGain=audioCtx.createGain();
+  micGain.gain.value=0.8;
+  musicGain=audioCtx.createGain();
+  musicGain.gain.value=0.85;
+  masterGain=audioCtx.createGain();
+  masterGain.gain.value=0.9;
+  sfxGain=audioCtx.createGain();
+  sfxGain.gain.value=0.9;
+  dest=audioCtx.createMediaStreamDestination();
+  micAnalyser=audioCtx.createAnalyser();
+  micAnalyser.fftSize=256;
+  masterAnalyser=audioCtx.createAnalyser();
+  masterAnalyser.fftSize=256;
+  micGain.connect(micAnalyser);
+  micGain.connect(masterGain);
+  musicGain.connect(masterGain);
+  sfxGain.connect(masterGain);
+  masterGain.connect(masterAnalyser);
+  try{masterGain.connect(audioCtx.destination);}catch(e){}
+  masterAnalyser.connect(dest);
+  if(dest.stream)dest.stream.getAudioTracks().forEach(t=>t.enabled=true);
+  try{if(!window._musicSrc){const src=audioCtx.createMediaElementSource(musicEl);src.connect(musicGain);window._musicSrc=src;}}catch(e){}
+  setInterval(()=>{
+    if(micAnalyser){
+      const d=new Uint8Array(micAnalyser.frequencyBinCount);
+      micAnalyser.getByteFrequencyData(d);
+      const v=d.reduce((a,b)=>a+b,0)/d.length;
+      const el=document.getElementById('micVu');
+      if(el)el.style.height=Math.min(100,v*1.5)+'%';
+    }
+    if(masterAnalyser){
+      const d=new Uint8Array(masterAnalyser.frequencyBinCount);
+      masterAnalyser.getByteFrequencyData(d);
+      const v=d.reduce((a,b)=>a+b,0)/d.length;
+      const el2=document.getElementById('masterVu');
+      if(el2)el2.style.height=Math.min(100,v*1.2)+'%';
+      const bars=document.querySelectorAll('#vuBars div');
+      if(bars&&(isLive||isBroadcaster||audioEl.srcObject||!musicEl.paused)){
+        bars.forEach((b,i)=>{
+          const h=15+Math.random()*v*1.2+Math.sin(Date.now()/200+i)*10;
+          b.style.height=Math.max(12,Math.min(95,h))+'%';
+          b.style.opacity='1';
+          b.style.transition='height 0.08s';
+        });
+      }
+    }
+    if(!isBroadcaster&&audioEl.srcObject){
+      const bars=document.querySelectorAll('#vuBars div');
+      bars.forEach(b=>{
+        b.style.height=(20+Math.random()*70)+'%';
+        b.style.transition='height 0.12s';
+      });
+    }
+  },80);
+}
+
+function loginDJ(){
+  const p=document.getElementById('pwd').value;
+  if(p==="Richietec2026!"){
+    socket.emit('dj-auth',p,ok=>{
+      document.getElementById('loginBox').style.display='none';
+      document.getElementById('mixerBox').style.display='block';
+    });
+  }else{
+    document.getElementById('loginErr').style.display='block';
+  }
+}
+
+async function toggleLive(){
+  await ensureAudio();
+  if(audioCtx.state==='suspended') await audioCtx.resume();
+  micGain.gain.value=0.8;musicGain.gain.value=0.85;masterGain.gain.value=0.9;
+  if(dest&&dest.stream)dest.stream.getAudioTracks().forEach(t=>t.enabled=true);
+  if(!isBroadcaster){
+    try{
+      micStream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}});
+      const micSrc=audioCtx.createMediaStreamSource(micStream);
+      micSrc.connect(micGain);
+      try{masterGain.disconnect();}catch(e){}
+      masterGain.connect(masterAnalyser);masterAnalyser.connect(dest);try{masterGain.connect(audioCtx.destination);}catch(e){}
+      isBroadcaster=true;isLive=true;socket.emit('broadcaster');
+      document.getElementById('goLiveBtn').textContent='■ STOP';
+      document.getElementById('goLiveBtn').style.background='#222';
+      onAirInterval=setInterval(()=>{onAirSec++;document.getElementById('onAirTimer').textContent=String(Math.floor(onAirSec/60)).padStart(2,'0')+':'+String(onAirSec%60).padStart(2,'0');document.getElementById('timer').textContent=String(Math.floor(onAirSec/60)).padStart(2,'0')+':'+String(onAirSec%60).padStart(2,'0')+' ON AIR';},1000);
+    }catch(e){alert('Mic needed - '+e.message);}
+  }else{
+    isBroadcaster=false;isLive=false;
+    if(micStream)micStream.getTracks().forEach(t=>t.stop());
+    socket.emit('broadcaster-stop');
+    document.getElementById('goLiveBtn').textContent='● GO LIVE';
+    document.getElementById('goLiveBtn').style.background='#FF2D55';
+    clearInterval(onAirInterval);onAirSec=0;Object.values(pcs).forEach(pc=>{try{pc.close();}catch(e){}});pcs={};
+    if(!autoPilot)socket.emit('live-status',false);
+  }
+}
+
+function startListening(){
+  if(!isLive&&!autoPilot){alert('Station offline — DJ must GO LIVE');return;}
+  if(!isLive&&!autoPilot){
+    alert('Station offline — DJ must GO LIVE');
+    return;
+  }
+  audioEl.muted=false;
+  audioEl.volume=parseFloat(document.getElementById('vol').value)||0.85;
+  socket.emit('watcher');
+  document.getElementById('playLiveBtn').textContent='❚❚';
+  document.getElementById('nowPlaying').textContent='Connecting worldwide...';
+  setTimeout(()=>{audioEl.play().catch(()=>{});},300);
+  setTimeout(()=>{
+    audioEl.play().catch(()=>{
+      document.getElementById('nowPlaying').textContent = 'Tap PLAY again to connect';
+    });
+  },300);
+}
+
+document.getElementById('vol').oninput=e=>{audioEl.volume=e.target.value;document.getElementById('volPct').textContent=Math.round(e.target.value*100)+'%';};
+document.getElementById('micGain').oninput=e=>{if(micGain)micGain.gain.value=e.target.value;};
+document.getElementById('masterGain').oninput=e=>{if(masterGain)masterGain.gain.value=e.target.value;};
+
+function toggleMute(){if(!micGain)return;const btn=document.getElementById('muteBtn');if(micGain.gain.value>0){micGain.gain.value=0;if(btn){btn.textContent='UNMUTED';btn.style.background='#ef4444';btn.style.color='#fff';btn.style.borderColor='#ef4444';}}else{micGain.gain.value=0.8;if(btn){btn.textContent='MUTE';btn.style.background='rgba(255,255,255,.05)';btn.style.color='#fff';btn.style.borderColor='rgba(255,255,255,.1)';}}}
+let talkPrev=0.85;function talkDown(){if(!musicGain)return;talkPrev=musicGain.gain.value;musicGain.gain.value=0.15;}function talkUp(){if(!musicGain)return;musicGain.gain.value=talkPrev;}
+document.getElementById('fileInput').onchange=e=>{handleFiles(e.target.files);};
+document.getElementById('dropZone').ondragover=e=>{e.preventDefault();e.currentTarget.style.borderColor='#FF2D55';};
+document.getElementById('dropZone').ondrop=e=>{e.preventDefault();handleFiles(e.dataTransfer.files);};
+function handleFiles(files){for(const f of files){const url=URL.createObjectURL(f);playlist.push({name:f.name,url});}renderPlaylist();if(!isMusicPlaying&&playlist.length>0){currentTrack=0;loadTrack(0);}}
+function renderPlaylist(){const el=document.getElementById('playlist');el.innerHTML='';playlist.forEach((t,i)=>{const d=document.createElement('div');d.style.cssText='display:flex;align-items:center;gap:6px;padding:6px;border-radius:8px;background:rgba(0,0,0,.3);border:1px solid rgba(255,255,255,.05);font-size:11px';d.innerHTML=`<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.name}</span><button onclick="loadTrack(${i})" style="padding:3px 8px;border-radius:6px;background:#fff;color:#000;border:none;font-size:9px">PLAY</button>`;el.appendChild(d);});}
+function loadTrack(i){if(!playlist[i])return;currentTrack=i;musicEl.src=playlist[i].url;musicEl.play();isMusicPlaying=true;document.getElementById('trackName').textContent=playlist[i].name;document.getElementById('musicPlayBtn').textContent='❚❚';}
+function playPauseMusic(){if(!musicEl.src){if(playlist[0])loadTrack(0);return;}if(isMusicPlaying){musicEl.pause();isMusicPlaying=false;document.getElementById('musicPlayBtn').textContent='▶';}else{musicEl.play();isMusicPlaying=true;document.getElementById('musicPlayBtn').textContent='❚❚';}}
+function nextTrack(){let n=currentTrack+1;if(n>=playlist.length)n=0;loadTrack(n);}
+musicEl.ontimeupdate=()=>{if(musicEl.duration){const p=(musicEl.currentTime/musicEl.duration)*100;document.getElementById('musicProgress').style.width=p+'%';document.getElementById('trackPct').textContent=Math.round(p)+'%';}};
+musicEl.onended=()=>{if(autoPilot||isMusicPlaying)nextTrack();};
+function toggleAuto(){autoPilot=!autoPilot;document.getElementById('autoBtn').textContent=autoPilot?'ON':'OFF';document.getElementById('autoBtn').style.background=autoPilot?'#f59e0b':'rgba(255,255,255,.05)';document.getElementById('autoBtn').style.color=autoPilot?'#000':'#fff';document.getElementById('autoNow').textContent=autoPilot?`▶ ${playlist[currentTrack]?.name||'Autopilot'}`:'Idle';if(autoPilot){if(!dest)ensureAudio();if(playlist.length>0&&!isMusicPlaying)loadTrack(currentTrack);if(!isBroadcaster){isBroadcaster=true;socket.emit('broadcaster');}}}
+function playSfx(t){if(!audioCtx)ensureAudio();const o=audioCtx.createOscillator(),g=audioCtx.createGain();o.connect(g);g.connect(sfxGain);if(t==='airhorn'){o.frequency.value=440;const o2=audioCtx.createOscillator();o2.frequency.value=660;o2.connect(g);o2.start();o2.stop(audioCtx.currentTime+0.6);}g.gain.setValueAtTime(0.8,audioCtx.currentTime);g.gain.exponentialRampToValueAtTime(0.01,audioCtx.currentTime+0.6);o.start();o.stop(audioCtx.currentTime+0.6);}
+function toggleRec(){if(!dest){alert('Go LIVE first');return;}if(!isRecording){recChunks=[];mediaRecorder=new MediaRecorder(dest.stream);mediaRecorder.ondataavailable=e=>{if(e.data.size>0)recChunks.push(e.data);};mediaRecorder.onstop=()=>{const blob=new Blob(recChunks,{type:'audio/webm'});const url=URL.createObjectURL(blob);const el=document.createElement('div');el.innerHTML=`<div style="padding:6px;border-radius:8px;background:rgba(0,0,0,.4);margin-top:6px;font-size:10px"><audio controls src="${url}" style="width:100%"></audio><a href="${url}" download="RICHIE-TEC-FM.webm" style="color:#FF2D55">Download</a></div>`;document.getElementById('recList').appendChild(el);};mediaRecorder.start();isRecording=true;document.getElementById('recBtn').textContent='STOP';}else{mediaRecorder.stop();isRecording=false;document.getElementById('recBtn').textContent='● REC';}}
+function sendChat(){const input=document.getElementById('chatIn');if(!input.value.trim()) return;const data={user:'Listener',text:input.value,time:new Date().toLocaleTimeString().slice(0,5)};socket.emit('chat-message',data);input.value='';const chat=document.getElementById('chat');const div=document.createElement('div');div.innerHTML=`<b>You:</b> ${data.text}`;chat.appendChild(div);chat.scrollTop=chat.scrollHeight;}
+function sendReq(){const name=document.getElementById('reqName').value||'Anonymous';const song=document.getElementById('reqSong').value;if(!song.trim()){alert('Enter song name');return;}const data={name,song,time:new Date().toLocaleTimeString().slice(0,5)};socket.emit('song-request',data);alert('✅ Request sent to DJ!');document.getElementById('reqSong').value='';}
+</script>
 </body>
 </html>
